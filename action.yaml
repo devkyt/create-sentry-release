@@ -1,0 +1,40 @@
+name: Create Sentry Release
+inputs:
+  SENTRY_ORG:
+    required: true
+    type: string
+  SENTRY_AUTH_TOKEN:
+    required: true
+    type: string
+  SENTRY_PROJECT:
+    required: true
+    type: string
+  SENTRY_RELEASE_NUMBER:
+    required: true
+    type: string
+  ENV:
+    required: true
+    type: string
+runs:
+  using: composite
+  steps:
+    - name: Install Sentry CLI
+      id: sentry_cli
+      run: curl -sL https://sentry.io/get-cli/ | bash
+      shell: bash
+
+    - name: Setup access creds in environment
+      id: sentry_env
+      run: |
+        echo "SENTRY_ORG=${{ inputs.SENTRY_ORG }}"  >> "$GITHUB_ENV" 
+        echo "SENTRY_AUTH_TOKEN=${{ inputs.SENTRY_AUTH_TOKEN }}"  >> "$GITHUB_ENV"
+      shell: bash
+
+    - name: Create new Sentry release
+      id: create_sentry_release
+      run: |
+        sentry-cli releases new -p ${{ inputs.SENTRY_PROJECT }} ${{ inputs.SENTRY_RELEASE_NUMBER }}
+        sentry-cli releases set-commits --auto ${{ inputs.SENTRY_RELEASE_NUMBER }}
+        sentry-cli releases finalize ${{ inputs.SENTRY_RELEASE_NUMBER }}
+        sentry-cli releases deploys ${{ inputs.SENTRY_RELEASE_NUMBER }} new -e  ${{ inputs.ENV }}
+      shell: bash
